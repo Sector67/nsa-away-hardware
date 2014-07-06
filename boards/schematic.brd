@@ -141,6 +141,8 @@
 <text x="31.75" y="-3.81" size="2.54" layer="49">Micro USB</text>
 <text x="27.94" y="12.7" size="2.54" layer="49" rot="R180">Microcontroller</text>
 <hole x="2.54" y="38.1" drill="5.08"/>
+<text x="62.23" y="6.35" size="1.778" layer="25">NSA AWAY</text>
+<text x="64.77" y="3.81" size="1.778" layer="25">REV 1</text>
 </plain>
 <libraries>
 <library name="SparkFun-Connectors">
