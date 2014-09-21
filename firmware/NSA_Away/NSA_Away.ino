@@ -45,7 +45,7 @@ char buffer[33];
 
 //where the keys will be stored
 //this is defined by the Android app rules
-prog_char folder_location PROGMEM = "/storage/extSdCard/Android/data/org.sector67.nsaaway/files/keys/";
+prog_char folder_location[] PROGMEM = "/storage/extSdCard/Android/data/org.sector67.nsaaway/files/keys/";
 
 //                                    First Row     Second Row
 //                               11111111111111112222222222222222
@@ -143,17 +143,6 @@ void setup() {
   
   // turn on the USB keyboard:
   Keyboard.begin();
-  /*don't need to do this immediately. shouldn't.
-  this is just for testing. eventually we should make sure
-  that the sd card is present, and we really only need to do
-  that if the UI wants to use it.
-  */
-  if (!sd_left.begin(SD_LEFT_CS)){
-    Keyboard.println("Error Left"); 
-  }
-  if (!sd_right.begin(SD_RIGHT_CS)){
-    Keyboard.println("Error Right"); 
-  }
 
   //temporary! Only doing this until we get the hardware RNG working
   randomSeed(0);
@@ -184,7 +173,7 @@ void loop() {
   processButtons();
   //do some things based on our current UI state if we're
   //supposed to be in the middle of a process
-  switch(current_ui_state){
+switch(current_ui_state){
     case 7:
       if (char_count < (char_count_destination * char_count_multiplier)){
         char_count++;
@@ -236,13 +225,17 @@ void readButtonStates(boolean include_sd){
     // There's no reason to check the SD card presence unless we need to.
     // read the value from the left SD card to detect presence:
     sensor_value = analogRead(A4);
+    sensor_value = 1000;//just for testing. It's not working right now.
     button_state = button_state<<1;
     button_state = button_state | (sensor_value>512?1:0);
     // read the value from the right SD card to detect presence:
     sensor_value = analogRead(A5);
+    sensor_value = 1000;//just for testing. It's not working right now.
     button_state = button_state<<1;
     button_state = button_state | (sensor_value>512?1:0);
     //TODO check the write protect bits
+    button_state = button_state<<1;
+    button_state = button_state<<1;
   }
   // read the value from the left button:
   sensor_value = analogRead(A3);
@@ -396,24 +389,78 @@ void processButtons(){
                               current_ui_state = 4;
                               update_ui = true;
                               break;
-			case 4:
+  		      case 4:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 5:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 6:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 8:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 9:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 10:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 12:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 13:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 14:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 16:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 17:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 18:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 19:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 20:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 22:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 23:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 24:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 25:
+                        current_ui_state = current_ui_state + 1;
+                        update_ui = true;
+                        break;
                       case 26:
                               current_ui_state = current_ui_state + 1;
                               update_ui = true;
@@ -426,11 +473,78 @@ void processButtons(){
      updateUIState(current_ui_state); 
     switch (current_ui_state){
        case 5:
-       case 9:
+        lcdPrintCharSize();
+        break;
+      case 9:
+         lcdPrintCharSize();
+         readButtonStates(true);
+         if (true){//(button_state & 64 == 64){
+           if (!sd_right.begin(SD_RIGHT_CS)){
+            lcd.setCursor(0,1);
+            lcd.print("              ");
+            lcd.setCursor(0,1);
+            lcd.print("Card Error");
+          }
+         }
+         else {
+          lcd.setCursor(0,1);
+          lcd.print("              ");
+          lcd.setCursor(0,1);
+          lcd.print("No Card");
+        }
+        if (true){//(button_state & 128 == 128){
+          if (!sd_left.begin(SD_LEFT_CS)){
+            lcd.setCursor(0,1);
+            lcd.print("              ");
+            lcd.setCursor(0,1);
+            lcd.print("Card Error");
+          }
+         }
+         else {
+          lcd.setCursor(0,1);
+          lcd.print("              ");
+          lcd.setCursor(0,1);
+          lcd.print("No Card");
+        }
+        break;
        case 19:
        case 25:
          lcdPrintCharSize();
         break; 
+       case 13:
+        readButtonStates(true);
+        if (true){//(button_state & 64 == 64){
+           if (!sd_right.begin(SD_RIGHT_CS)){
+            lcd.setCursor(0,1);
+            lcd.print("              ");
+            lcd.setCursor(0,1);
+            lcd.print("Card Error");
+          }
+         }
+         else {
+          lcd.setCursor(0,1);
+          lcd.print("              ");
+          lcd.setCursor(0,1);
+          lcd.print("No Card");
+        }
+       case 17:
+       case 23:
+        readButtonStates(true);
+        if (true){//(button_state & 128 == 128){
+          if (!sd_left.begin(SD_LEFT_CS)){
+            lcd.setCursor(0,1);
+            lcd.print("              ");
+            lcd.setCursor(0,1);
+            lcd.print("Card Error");
+          }
+         }
+         else {
+          lcd.setCursor(0,1);
+          lcd.print("              ");
+          lcd.setCursor(0,1);
+          lcd.print("No Card");
+        }
+        break;
     }
   }
 }
