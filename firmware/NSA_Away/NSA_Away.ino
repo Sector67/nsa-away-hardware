@@ -22,14 +22,21 @@
 //pin for the backlight
 #define LCD_BACKLIGHT 3
 
+//#include <SoftwareSerial.h>
+
+//#define SERIAL_IN 7
+//#define SERIAL_OUT 17
+
+//SoftwareSerial inputSerial(SERIAL_IN,SERIAL_OUT); //Rx, Tx
+
 //left SD card access
 SdFat sd_left;
 const uint8_t SD_LEFT_CS = 4;  // chip select for sd_left
-
+const uint8_t SD_LEFT_WP = 6;  //write protect test
 //right SD card access
 SdFat sd_right;
 const uint8_t SD_RIGHT_CS = 5;   // chip select for sd_right
-
+const uint8_t SD_RIGHT_WP = 7;  //write protect test
 //temp variables for how many bytes to read/write
 //how many we've read so far
 long char_count = 0;
@@ -45,43 +52,45 @@ char buffer[33];
 
 //where the keys will be stored
 //this is defined by the Android app rules
-prog_char folder_location[] PROGMEM = "/storage/extSdCard/Android/data/org.sector67.nsaaway/files/keys/";
+prog_char const folder_location[] PROGMEM = "/storage/extSdCard/Android/data/org.sector67.nsaaway/files/keys/";
 
 //                                    First Row     Second Row
 //                               11111111111111112222222222222222
-prog_char string_00[] PROGMEM = "                                ";//0
-prog_char string_01[] PROGMEM = "initializing...                 ";//1
-prog_char string_02[] PROGMEM = "complete!       ok             >";//2
-prog_char string_03[] PROGMEM = "error.          oops.          >";//3
-prog_char string_10[] PROGMEM = "Random        ^>to keyboard   v ";//4
-prog_char string_11[] PROGMEM = "length       <^>(unlimited)   v ";//5
-prog_char string_12[] PROGMEM = "start          >cancel         <";//6
-prog_char string_13[] PROGMEM = "printing...     stop           <";//7
-prog_char string_20[] PROGMEM = "Random        ^>to SD cards   v ";//8
-prog_char string_21[] PROGMEM = "length       <^>1 byte        v ";//9
-prog_char string_22[] PROGMEM = "start          >cancel         <";//10
-prog_char string_23[] PROGMEM = "generating...   stop           <";//11
-prog_char string_30[] PROGMEM = "Copy Left     ^>to Right      v ";//12
-prog_char string_31[] PROGMEM = "file          ^>1.txt         v ";//13
-prog_char string_32[] PROGMEM = "start          >cancel         <";//14
-prog_char string_33[] PROGMEM = "copying file... stop           <";//15
-prog_char string_40[] PROGMEM = "Left Card     ^>to Keyboard   v ";//16
-prog_char string_41[] PROGMEM = "file          ^>1.txt         v ";//17
-prog_char string_42[] PROGMEM = "offset       <^>0             v ";//18
-prog_char string_43[] PROGMEM = "length       <^>(full)        v ";//19
-prog_char string_44[] PROGMEM = "start          >cancel         <";//20
-prog_char string_45[] PROGMEM = "printing...     stop           <";//21
-prog_char string_50[] PROGMEM = "Left Card     ^>to Screen     v ";//22
-prog_char string_51[] PROGMEM = "file          ^>1.txt         v ";//23
-prog_char string_52[] PROGMEM = "offset       <^>0             v ";//24
-prog_char string_53[] PROGMEM = "length       <^>(full)        v ";//25
-prog_char string_54[] PROGMEM = "start          >cancel         <";//26
-prog_char string_55[] PROGMEM = "printing...     stop           <";//27
+prog_char const string_00[] PROGMEM = "                                ";//0
+prog_char const string_01[] PROGMEM = "initializing...                 ";//1
+prog_char const string_02[] PROGMEM = "complete!       ok             >";//2
+prog_char const string_03[] PROGMEM = "error.          oops.          >";//3
+prog_char const string_10[] PROGMEM = "Random        ^>to keyboard   v ";//4
+prog_char const string_11[] PROGMEM = "length       <^>(unlimited)   v ";//5
+prog_char const string_12[] PROGMEM = "start          >cancel         <";//6
+prog_char const string_13[] PROGMEM = "printing...     stop           <";//7
+prog_char const string_20[] PROGMEM = "Random        ^>to SD cards   v ";//8
+prog_char const string_21[] PROGMEM = "length       <^>1 byte        v ";//9
+prog_char const string_22[] PROGMEM = "start          >cancel         <";//10
+prog_char const string_23[] PROGMEM = "generating...   stop           <";//11
+prog_char const string_30[] PROGMEM = "Copy Left     ^>to Right      v ";//12
+prog_char const string_31[] PROGMEM = "file          ^>1.txt         v ";//13
+prog_char const string_32[] PROGMEM = "start          >cancel         <";//14
+prog_char const string_33[] PROGMEM = "copying file... stop           <";//15
+prog_char const string_40[] PROGMEM = "Left Card     ^>to Keyboard   v ";//16
+prog_char const string_41[] PROGMEM = "file          ^>1.txt         v ";//17
+prog_char const string_42[] PROGMEM = "offset       <^>0             v ";//18
+prog_char const string_43[] PROGMEM = "length       <^>(full)        v ";//19
+prog_char const string_44[] PROGMEM = "start          >cancel         <";//20
+prog_char const string_45[] PROGMEM = "printing...     stop           <";//21
+prog_char const string_50[] PROGMEM = "Left Card     ^>to Screen     v ";//22
+prog_char const string_51[] PROGMEM = "file          ^>1.txt         v ";//23
+prog_char const string_52[] PROGMEM = "offset       <^>0             v ";//24
+prog_char const string_53[] PROGMEM = "length       <^>(full)        v ";//25
+prog_char const string_54[] PROGMEM = "start          >cancel         <";//26
+prog_char const string_55[] PROGMEM = "printing...     stop           <";//27
+prog_char const string_60[] PROGMEM = "Serial in     ^>to keyboard   v ";//28
+prog_char const string_61[] PROGMEM = "printing...     stop           <";//29
 
 //mapping the strings to an array to make it easier to refer to the strings
 //we can also use the string table as the UI state where each string is a different
 //state of our machine
-PROGMEM const char *string_table[] = 
+const char* const string_table[] PROGMEM = 
 {
 	string_00,
 	string_01,
@@ -110,7 +119,9 @@ PROGMEM const char *string_table[] =
 	string_52,
 	string_53,
 	string_54,
-	string_55
+	string_55,
+  string_60,
+  string_61
 };
 
 byte current_ui_state = 1;
@@ -134,7 +145,13 @@ LiquidCrystal lcd(8, 9, 10,11,12,13);
 void setup() {
   
   //Serial.begin(38400);
-  
+  //pinMode(SERIAL_IN,INPUT);
+  //pinMode(SERIAL_OUT,OUTPUT);
+  pinMode(SD_LEFT_WP,INPUT);
+  pinMode(SD_RIGHT_WP,INPUT);
+  //inputSerial.begin(38400);
+  //inputSerial.listen();
+  Serial1.begin(38400);
   //set up the LCD. The backlight is on a MOSFET
   //so we can control it easily.
   pinMode(LCD_BACKLIGHT,OUTPUT);
@@ -143,7 +160,12 @@ void setup() {
   
   // turn on the USB keyboard:
   Keyboard.begin();
-
+  
+  digitalWrite(A4, HIGH);  // set pullup on analog pin 4 for detecting SD presence
+  digitalWrite(A5, HIGH);  // set pullup on analog pin 5 for detecting SD presence
+  digitalWrite(SD_LEFT_WP,HIGH);
+  digitalWrite(SD_RIGHT_WP,HIGH);
+  
   //temporary! Only doing this until we get the hardware RNG working
   randomSeed(0);
   
@@ -205,6 +227,12 @@ switch(current_ui_state){
         updateUIState(current_ui_state);
       }
       break;
+    case 29:
+      if (Serial1.available()){
+        char c = Serial1.read();
+        Keyboard.write(c);
+      }
+      break;
     default:
       delay(100); 
   }
@@ -225,17 +253,20 @@ void readButtonStates(boolean include_sd){
     // There's no reason to check the SD card presence unless we need to.
     // read the value from the left SD card to detect presence:
     sensor_value = analogRead(A4);
-    sensor_value = 1000;//just for testing. It's not working right now.
-    button_state = button_state<<1;
-    button_state = button_state | (sensor_value>512?1:0);
+    //sensor_value = 1000;//just for testing. It's not working right now.
+    button_state = button_state | (sensor_value<512?1:0);
     // read the value from the right SD card to detect presence:
     sensor_value = analogRead(A5);
-    sensor_value = 1000;//just for testing. It's not working right now.
+    //sensor_value = 1000;//just for testing. It's not working right now.
     button_state = button_state<<1;
-    button_state = button_state | (sensor_value>512?1:0);
+    button_state = button_state | (sensor_value<512?1:0);
     //TODO check the write protect bits
+    sensor_value = digitalRead(6);
     button_state = button_state<<1;
+    button_state = button_state | sensor_value;
+    sensor_value = digitalRead(7);
     button_state = button_state<<1;
+    button_state = button_state | sensor_value;
   }
   // read the value from the left button:
   sensor_value = analogRead(A3);
@@ -265,284 +296,263 @@ void processButtons(){
 	if (button_state == 2 && prev_button_state == 0){
 		switch(current_ui_state){
 			case 4:
-                              current_ui_state = 22;
-                              update_ui = true;
-                              break;
-                      case 5:
-                              char_count_destination++;
-                              lcdPrintCharSize();
-                              break;
+        current_ui_state = 28;
+        update_ui = true;
+        break;
+      case 5:
+        char_count_destination++;
+        lcdPrintCharSize();
+        break;
+      case 1:
+      case 2:
+      case 3:
 			case 8:
-                              current_ui_state = 4;
-                              update_ui = true;
-				break;
-                      case 9:
-                              char_count_destination++;
-                              lcdPrintCharSize();
-                              break;
+        current_ui_state = 4;
+        update_ui = true;
+       	break;
+      case 9:
+        char_count_destination++;
+        lcdPrintCharSize();
+        break;
 			case 12:
-                              current_ui_state = 8;
-                              update_ui = true;
-                              break;
+        current_ui_state = 8;
+        update_ui = true;
+        break;
 			case 16:
-                              current_ui_state = 12;
-                              update_ui = true;
-                              break;
+        current_ui_state = 12;
+        update_ui = true;
+        break;
 			case 22:
-                              current_ui_state = 16;
-                              update_ui = true;
-                              break;
+        current_ui_state = 16;
+        update_ui = true;
+        break;
+      case 28:
+        current_ui_state = 22;
+        update_ui = true;
+        break;
 			default:
-		                break;
+        break;
 		}
 	}
 	if (button_state == 1 && prev_button_state == 0){
 		//if the button was DOWN
 		switch(current_ui_state){
 			case 4:
-                              current_ui_state = 8;
-                              update_ui = true;
-                              break;
-                      case 5:
-                              if (char_count_destination > 0){
-                                char_count_destination--;
-                              }
-                              lcdPrintCharSize();
-                              break;
+        current_ui_state = 8;
+        update_ui = true;
+        break;
+      case 5:
+        if (char_count_destination > 0){
+          char_count_destination--;
+        }
+        lcdPrintCharSize();
+        break;
 			case 8:
-                              current_ui_state = 12;
-                              update_ui = true;
+        current_ui_state = 12;
+        update_ui = true;
 				break;
-                      case 9:
-                              if (char_count_destination > 0){
-                                char_count_destination--;
-                              }
-                              lcdPrintCharSize();
-                              break;
+      case 9:
+        if (char_count_destination > 0){
+          char_count_destination--;
+        }
+        lcdPrintCharSize();
+        break;
 			case 12:
-                              current_ui_state = 16;
-                              update_ui = true;
-                              break;
+        current_ui_state = 16;
+        update_ui = true;
+        break;
 			case 16:
-                              current_ui_state = 22;
-                              update_ui = true;
-                              break;
+        current_ui_state = 22;
+        update_ui = true;
+        break;
 			case 22:
-                              current_ui_state = 4;
-                              update_ui = true;
-                              break;
+        current_ui_state = 28;
+        update_ui = true;
+        break;
+      case 1:
+      case 2:
+      case 3:
+      case 28:
+        current_ui_state = 4;
+        update_ui = true;
+        break;
 			default:
-		                break;
+        break;
 		}
 	}
 	if (button_state == 8 && prev_button_state == 0){
 		//if the button was LEFT
 		switch(current_ui_state){
-                      case 5:
-                      case 9:
-                              switch(char_count_multiplier){
-                                case 1:
-                                  char_count_multiplier = 1024;
-                                  break;
-                                case 1024:
-                                  char_count_multiplier = 1048576;
-                                  break;
-                                case 1048576:
-                                  char_count_multiplier = 1;
-                                  break;
-                              }
-                              lcdPrintCharSize();
-                              break;
+      case 5:
+      case 9:
+        switch(char_count_multiplier){
+          case 1:
+            char_count_multiplier = 1024;
+            break;
+          case 1024:
+            char_count_multiplier = 1048576;
+            break;
+          case 1048576:
+            char_count_multiplier = 1;
+            break;
+        }
+        lcdPrintCharSize();
+        break;
+      case 1:
+      case 2:
+      case 3:
 			case 6:
 			case 7:
-                              current_ui_state = 4;
-                              update_ui = true;
+        current_ui_state = 4;
+        update_ui = true;
 				break;
 			case 10:
 			case 11:
-                              current_ui_state = 8;
-                              update_ui = true;
+        current_ui_state = 8;
+        update_ui = true;
 				break;
 			case 14:
 			case 15:
-                              current_ui_state = 12;
-                              update_ui = true;
+        current_ui_state = 12;
+        update_ui = true;
 				break;
 			case 20:
 			case 21:
-                              current_ui_state = 16;
-                              update_ui = true;
+        current_ui_state = 16;
+        update_ui = true;
 				break;
 			case 26:
 			case 27:
-                              current_ui_state = 22;
-                              update_ui = true;
+        current_ui_state = 22;
+        update_ui = true;
 				break;
+      case 29:
+        current_ui_state = 28;
+        update_ui = true;
+        break;
 			default:
-		                break;
+        break;
 		}
 	}
 	if (button_state == 4 && prev_button_state == 0){
 		//if the button was RIGHT
 		switch(current_ui_state){
-                      case 2:
-                              current_ui_state = 4;
-                              update_ui = true;
-                              break;
-  		      case 4:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 5:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 6:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 8:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 9:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 10:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 12:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 13:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 14:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 16:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 17:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 18:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 19:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 20:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 22:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 23:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 24:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 25:
-                        current_ui_state = current_ui_state + 1;
-                        update_ui = true;
-                        break;
-                      case 26:
-                              current_ui_state = current_ui_state + 1;
-                              update_ui = true;
-                              break;
+      case 1:
+      case 2:
+      case 3:
+        current_ui_state = 4;
+        update_ui = true;
+        break;
+      case 4:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 5:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 6:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 8:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 9:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 10:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 12:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 13:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 14:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 16:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 17:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 18:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 19:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 20:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 22:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 23:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 24:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 25:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 26:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
+      case 28:
+        current_ui_state = current_ui_state + 1;
+        update_ui = true;
+        break;
 			default:
-		                break;
+        break;
 		}
 	}
   if(update_ui==true){
-     updateUIState(current_ui_state); 
+    updateUIState(current_ui_state); 
     switch (current_ui_state){
-       case 5:
+      case 5:
         lcdPrintCharSize();
         break;
       case 9:
-         lcdPrintCharSize();
-         readButtonStates(true);
-         if (true){//(button_state & 64 == 64){
-           if (!sd_right.begin(SD_RIGHT_CS)){
-            lcd.setCursor(0,1);
-            lcd.print("              ");
-            lcd.setCursor(0,1);
-            lcd.print("Card Error");
-          }
-         }
-         else {
-          lcd.setCursor(0,1);
-          lcd.print("              ");
-          lcd.setCursor(0,1);
-          lcd.print("No Card");
+        if (testCard(true,true)){
+         current_ui_state = 3; 
         }
-        if (true){//(button_state & 128 == 128){
-          if (!sd_left.begin(SD_LEFT_CS)){
-            lcd.setCursor(0,1);
-            lcd.print("              ");
-            lcd.setCursor(0,1);
-            lcd.print("Card Error");
-          }
-         }
-         else {
-          lcd.setCursor(0,1);
-          lcd.print("              ");
-          lcd.setCursor(0,1);
-          lcd.print("No Card");
+        if (testCard(false,true)){
+         current_ui_state = 3; 
         }
         break;
-       case 19:
-       case 25:
+      case 19:
+      case 25:
          lcdPrintCharSize();
-        break; 
-       case 13:
-        readButtonStates(true);
-        if (true){//(button_state & 64 == 64){
-           if (!sd_right.begin(SD_RIGHT_CS)){
-            lcd.setCursor(0,1);
-            lcd.print("              ");
-            lcd.setCursor(0,1);
-            lcd.print("Card Error");
-          }
-         }
-         else {
-          lcd.setCursor(0,1);
-          lcd.print("              ");
-          lcd.setCursor(0,1);
-          lcd.print("No Card");
+         break; 
+      case 13:
+        if (testCard(false,true)){
+         current_ui_state = 3; 
         }
-       case 17:
-       case 23:
-        readButtonStates(true);
-        if (true){//(button_state & 128 == 128){
-          if (!sd_left.begin(SD_LEFT_CS)){
-            lcd.setCursor(0,1);
-            lcd.print("              ");
-            lcd.setCursor(0,1);
-            lcd.print("Card Error");
-          }
-         }
-         else {
-          lcd.setCursor(0,1);
-          lcd.print("              ");
-          lcd.setCursor(0,1);
-          lcd.print("No Card");
+      case 17:
+      case 23:
+        if (testCard(true,false)){
+         current_ui_state = 3; 
         }
         break;
     }
@@ -562,16 +572,16 @@ void lcdPrintCharSize(){
   lcd.print(char_count_destination);
   lcd.print(" ");
   switch(char_count_multiplier){
-        case 1:
-          lcd.print("bytes");
-          break;
-        case 1024:
-          lcd.print("kb");
-          break;
-        case 1048576:
-          lcd.print("mb");
-          break;
-      } 
+    case 1:
+      lcd.print("bytes");
+      break;
+    case 1024:
+      lcd.print("kb");
+      break;
+    case 1048576:
+      lcd.print("mb");
+      break;
+  } 
 }
 
 //takes a single string and prints it to the screen.
@@ -587,6 +597,36 @@ void lcdPrintLongMessage(byte message){
  for (numChar = 0; numChar < 16;numChar++){
    lcd.print(buffer[numChar+16]);
  }
+}
+
+boolean testCard(boolean left, boolean wp){
+  boolean success = false;
+  readButtonStates(true);
+  if (button_state & (left?128:64)){
+    success = left?sd_left.begin(SD_LEFT_CS):sd_right.begin(SD_RIGHT_CS);
+    if (!success){
+      lcd.setCursor(0,1);
+      lcd.print("              ");
+      lcd.setCursor(0,1);
+      lcd.print("Card Error");
+      return false;
+    }
+    else if (wp && button_state & (left?32:16)){
+      lcd.setCursor(0,1);
+      lcd.print("              ");
+      lcd.setCursor(0,1);
+      lcd.print("Write Protect");
+      return false;
+    }
+   }
+   else {
+    lcd.setCursor(0,1);
+    lcd.print("              ");
+    lcd.setCursor(0,1);
+    lcd.print("No Card");
+    return false;
+  }
+  return true;
 }
 
 //this is such a hack to get a random hex character.
