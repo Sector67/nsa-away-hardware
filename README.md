@@ -23,7 +23,7 @@ Random number generator that fills out two SD cards, dumps to a HID keyboard, or
 
 <h2>Purpose</h2>
 
-There are 5 possible uses for this device:
+There are 6 possible uses for this device:
 
 <ol>
 <li>Create two identical SD cards that contain the same OTP with the same random data. These SD cards are then distributed to the two people who need to communicate, and they have a source of secure shared random data.</li>
@@ -31,6 +31,7 @@ There are 5 possible uses for this device:
 <li>Random number generator over USB. It is sometimes necessary to have a random number generator for other purposes. This generates random data and pipes it out over USB as an HID keyboard. It does this so that it won't allow traffic IN to the machine, potentially compromising it.</li>
 <li>USB Keyboard for translating. When a message is sent, the user needs to be able to encrypt or decrypt it. This allows the user to plug in the device and consume the random data from the OTP.</li>
 <li>In a pinch, the device could be used to decrypt when a USB connection isn't available. In this mode, the user specifies the offset and starts reading characters, which are displayed one by one. Time consuming, but it works.</li>
+<li>Serial port to keyboard. In this mode, anything spit out over the USB serial port (FTDI) gets printed to the keyboard. This allows you to connect a secure device to an unsecure device without the need for drivers and without exposing the secure device.</li>
 </ol>
 <h2>Theory of operation</h2>
 
