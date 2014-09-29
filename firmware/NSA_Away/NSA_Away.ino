@@ -35,6 +35,9 @@ const uint8_t SD_LEFT_CS = 4;  // chip select for sd_left
 const uint8_t SD_LEFT_WP = 6;  //write protect test
 //right SD card access
 SdFat sd_right;
+SdFile file_left;
+SdFile file_right;
+
 const uint8_t SD_RIGHT_CS = 5;   // chip select for sd_right
 const uint8_t SD_RIGHT_WP = 7;  //write protect test
 //temp variables for how many bytes to read/write
@@ -45,14 +48,19 @@ long char_count_destination = 0;
 //1=bytes, 1024 = kilobytes, etc.
 long char_count_multiplier = 1;
 
+const uint8_t BUF_DIM = 10;
+uint8_t buf[BUF_DIM];
+
 //for the input buttons
 int sensor_value = 0;
 //for the LCD
-char buffer[33];
+char buffer[54];
 
 //where the keys will be stored
 //this is defined by the Android app rules
-prog_char const folder_location[] PROGMEM = "/storage/extSdCard/Android/data/org.sector67.nsaaway/files/keys/";
+//const char folder_location[] = "/storage/extSdCard/Android/data/org.sector67.nsaaway/files/keys/";
+//gonna take some work to get it to go that deep in the folder structure. let's start with this first level
+const char folder_location[] = "/storage/";
 
 //                                    First Row     Second Row
 //                               11111111111111112222222222222222
@@ -65,7 +73,7 @@ prog_char const string_11[] PROGMEM = "length       <^>(unlimited)   v ";//5
 prog_char const string_12[] PROGMEM = "start          >cancel         <";//6
 prog_char const string_13[] PROGMEM = "printing...     stop           <";//7
 prog_char const string_20[] PROGMEM = "Random        ^>to SD cards   v ";//8
-prog_char const string_21[] PROGMEM = "length       <^>1 byte        v ";//9
+prog_char const string_21[] PROGMEM = "length       <^>checking...   v ";//9
 prog_char const string_22[] PROGMEM = "start          >cancel         <";//10
 prog_char const string_23[] PROGMEM = "generating...   stop           <";//11
 prog_char const string_30[] PROGMEM = "Copy Left     ^>to Right      v ";//12
@@ -120,8 +128,8 @@ const char* const string_table[] PROGMEM =
 	string_53,
 	string_54,
 	string_55,
-  string_60,
-  string_61
+        string_60,
+        string_61
 };
 
 byte current_ui_state = 1;
@@ -151,7 +159,7 @@ void setup() {
   pinMode(SD_RIGHT_WP,INPUT);
   //inputSerial.begin(38400);
   //inputSerial.listen();
-  Serial1.begin(38400);
+  Serial1.begin(19200);
   //set up the LCD. The backlight is on a MOSFET
   //so we can control it easily.
   pinMode(LCD_BACKLIGHT,OUTPUT);
@@ -168,14 +176,6 @@ void setup() {
   
   //temporary! Only doing this until we get the hardware RNG working
   randomSeed(0);
-  
-  // create DIR1 on sd1 if it does not exist
-  // more testing stuff
-  /*
-  if (!sd_1eft.exists("/")) {
-    if (!sd_1eft.mkdir("/DIR1")) sd_1eft.errorExit("sd1.mkdir");
-  }
-  */
   
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
@@ -196,7 +196,7 @@ void loop() {
   //do some things based on our current UI state if we're
   //supposed to be in the middle of a process
 switch(current_ui_state){
-    case 7:
+    case 7: //random to keyboard
       if (char_count < (char_count_destination * char_count_multiplier)){
         char_count++;
         //we're calling getRandomChar() twice because we need two hex characters.
@@ -214,17 +214,56 @@ switch(current_ui_state){
         updateUIState(current_ui_state);
       }
       break;
-    case 11:
+    case 11: //Random to SD Cards
+      if (char_count == 0){
+        if (!sd_left.exists(folder_location)) {
+          sd_left.mkdir(folder_location);
+        }
+        sd_left.chdir(folder_location);
+        sd_left.chvol();
+        file_left.open("TEST.BIN", O_RDWR | O_CREAT | O_TRUNC);
+        if (!sd_right.exists(folder_location)) {
+          sd_right.mkdir(folder_location);
+        }
+        sd_right.chdir(folder_location);
+        sd_right.chvol();
+        file_right.open("TEST.BIN", O_RDWR | O_CREAT | O_TRUNC);
+      }
       if (char_count < (char_count_destination * char_count_multiplier)){
         char_count++;
-        getRandomChar();//TODO have this go somewhere :) this was only implemented to make it LOOK like it was doing something.
-        getRandomChar();
+        char b = getRandomByte();
+        file_left.write(b);
+        file_right.write(b);
       }
       else {
         char_count = 0;
         char_count_destination = 0;
         current_ui_state = 2; 
         updateUIState(current_ui_state);
+        file_left.close();
+        file_right.close();
+      }
+      break;
+    case 21:
+      if (char_count == 0){
+        if (!sd_left.exists(folder_location)) {
+          sd_left.mkdir(folder_location);
+        }
+        sd_left.chdir(folder_location);
+        sd_left.chvol();
+        file_left.open("TEST.BIN", O_RDWR);
+      }
+      if (char_count < (char_count_destination * char_count_multiplier)){
+        char_count++;        
+        file_left.read(buf,1);
+        Keyboard.print(buf[0],HEX);
+      }
+      else {
+        char_count = 0;
+        char_count_destination = 0;
+        current_ui_state = 2; 
+        updateUIState(current_ui_state);
+        file_left.close();
       }
       break;
     case 29:
@@ -263,10 +302,10 @@ void readButtonStates(boolean include_sd){
     //TODO check the write protect bits
     sensor_value = digitalRead(6);
     button_state = button_state<<1;
-    button_state = button_state | sensor_value;
+    button_state = button_state | 1;//sensor_value;
     sensor_value = digitalRead(7);
     button_state = button_state<<1;
-    button_state = button_state | sensor_value;
+    button_state = button_state | 1;//sensor_value;
   }
   // read the value from the left button:
   sensor_value = analogRead(A3);
@@ -293,20 +332,22 @@ void readButtonStates(boolean include_sd){
 void processButtons(){
     boolean update_ui = false;//do we need to change the UI? Default to no.
 	//if the button was UP
-	if (button_state == 2 && prev_button_state == 0){
-		switch(current_ui_state){
-			case 4:
+  if (button_state == 2 && prev_button_state == 0){
+    switch(current_ui_state){
+      case 4:
         current_ui_state = 28;
         update_ui = true;
         break;
       case 5:
+      case 19:
+      case 25:
         char_count_destination++;
         lcdPrintCharSize();
         break;
       case 1:
       case 2:
       case 3:
-			case 8:
+      case 8:
         current_ui_state = 4;
         update_ui = true;
        	break;
@@ -314,15 +355,15 @@ void processButtons(){
         char_count_destination++;
         lcdPrintCharSize();
         break;
-			case 12:
+      case 12:
         current_ui_state = 8;
         update_ui = true;
         break;
-			case 16:
+      case 16:
         current_ui_state = 12;
         update_ui = true;
         break;
-			case 22:
+      case 22:
         current_ui_state = 16;
         update_ui = true;
         break;
@@ -330,42 +371,44 @@ void processButtons(){
         current_ui_state = 22;
         update_ui = true;
         break;
-			default:
+      default:
         break;
-		}
-	}
-	if (button_state == 1 && prev_button_state == 0){
-		//if the button was DOWN
-		switch(current_ui_state){
-			case 4:
+    }
+  }
+  if (button_state == 1 && prev_button_state == 0){
+    //if the button was DOWN
+    switch(current_ui_state){
+      case 4:
         current_ui_state = 8;
         update_ui = true;
         break;
       case 5:
+      case 19:
+      case 25:
         if (char_count_destination > 0){
           char_count_destination--;
         }
         lcdPrintCharSize();
         break;
-			case 8:
+      case 8:
         current_ui_state = 12;
         update_ui = true;
-				break;
+	break;
       case 9:
         if (char_count_destination > 0){
           char_count_destination--;
         }
         lcdPrintCharSize();
         break;
-			case 12:
+      case 12:
         current_ui_state = 16;
         update_ui = true;
         break;
-			case 16:
+      case 16:
         current_ui_state = 22;
         update_ui = true;
         break;
-			case 22:
+      case 22:
         current_ui_state = 28;
         update_ui = true;
         break;
@@ -376,15 +419,17 @@ void processButtons(){
         current_ui_state = 4;
         update_ui = true;
         break;
-			default:
+      default:
         break;
-		}
-	}
-	if (button_state == 8 && prev_button_state == 0){
-		//if the button was LEFT
-		switch(current_ui_state){
+    }
+  }
+  if (button_state == 8 && prev_button_state == 0){
+    //if the button was LEFT
+    switch(current_ui_state){
       case 5:
       case 9:
+      case 19:
+      case 25:
         switch(char_count_multiplier){
           case 1:
             char_count_multiplier = 1024;
@@ -401,42 +446,42 @@ void processButtons(){
       case 1:
       case 2:
       case 3:
-			case 6:
-			case 7:
+      case 6:
+      case 7:
         current_ui_state = 4;
         update_ui = true;
-				break;
-			case 10:
-			case 11:
+	break;
+      case 10:
+      case 11:
         current_ui_state = 8;
         update_ui = true;
-				break;
-			case 14:
-			case 15:
+	break;
+      case 14:
+      case 15:
         current_ui_state = 12;
         update_ui = true;
-				break;
-			case 20:
-			case 21:
+	break;
+      case 20:
+      case 21:
         current_ui_state = 16;
         update_ui = true;
-				break;
-			case 26:
-			case 27:
+	break;
+      case 26:
+      case 27:
         current_ui_state = 22;
         update_ui = true;
-				break;
+	break;
       case 29:
         current_ui_state = 28;
         update_ui = true;
         break;
-			default:
+      default:
         break;
-		}
-	}
-	if (button_state == 4 && prev_button_state == 0){
-		//if the button was RIGHT
-		switch(current_ui_state){
+    }
+  }
+  if (button_state == 4 && prev_button_state == 0){
+    //if the button was RIGHT
+    switch(current_ui_state){
       case 1:
       case 2:
       case 3:
@@ -523,10 +568,10 @@ void processButtons(){
         current_ui_state = current_ui_state + 1;
         update_ui = true;
         break;
-			default:
+      default:
         break;
-		}
-	}
+    }
+  }
   if(update_ui==true){
     updateUIState(current_ui_state); 
     switch (current_ui_state){
@@ -534,24 +579,25 @@ void processButtons(){
         lcdPrintCharSize();
         break;
       case 9:
-        if (testCard(true,true)){
+        if (!testCard(true,true)){
          current_ui_state = 3; 
         }
-        if (testCard(false,true)){
+        if (!testCard(false,true)){
          current_ui_state = 3; 
         }
+        lcdPrintCharSize();
         break;
       case 19:
       case 25:
          lcdPrintCharSize();
          break; 
       case 13:
-        if (testCard(false,true)){
+        if (!testCard(false,true)){
          current_ui_state = 3; 
         }
       case 17:
       case 23:
-        if (testCard(true,false)){
+        if (!testCard(true,false)){
          current_ui_state = 3; 
         }
         break;
@@ -633,4 +679,9 @@ boolean testCard(boolean left, boolean wp){
 byte getRandomChar(){
   byte b = random(16);
   return b<10?b+48:b+55;
+}
+
+byte getRandomByte(){
+  byte b = random(255);
+  return b; 
 }
